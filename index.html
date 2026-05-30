@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocTrack FL — Matter Document Inventory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0F2044;--navy2:#1B3461;--gold:#D4A017;
+  --bg:#F5F7FA;--white:#fff;--text:#1A1A2E;--text2:#4A5568;
+  --border:#E2E8F0;--r:10px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+nav{background:var(--navy);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px}
+.brand{color:#fff;font-weight:700;font-size:1rem;text-decoration:none}.brand span{color:var(--gold)}
+.page-header{background:linear-gradient(135deg,#1B0F44 0%,#3D1F80 100%);color:#fff;padding:1.5rem;padding-bottom:1rem}
+.page-header h1{font-size:1.4rem;font-weight:700;margin-bottom:.2rem}.page-header h1 span{color:var(--gold)}
+.page-header p{opacity:.75;font-size:.85rem}
+.toolbar{background:var(--white);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.btn{padding:.4rem .9rem;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--white);color:var(--text);transition:all .2s}
+.btn:hover{border-color:var(--navy);color:var(--navy)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--navy2);color:#fff;border-color:var(--navy2)}
+select,input[type=text]{padding:.4rem .75rem;border:1px solid var(--border);border-radius:6px;font-size:.82rem;color:var(--text);background:var(--white)}
+select:focus,input:focus{outline:none;border-color:var(--navy)}
+.sep{width:1px;height:24px;background:var(--border)}
+.matter-label{font-size:.85rem;font-weight:700;color:var(--navy);padding:.75rem 1.5rem .25rem;display:flex;align-items:center;gap:.75rem}
+.matter-label span{font-size:.75rem;color:var(--text2);font-weight:400}
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;padding:.75rem 1.5rem}
+.stat{background:var(--white);border-radius:8px;padding:.65rem .9rem;border:1px solid var(--border)}
+.stat .num{font-size:1.4rem;font-weight:700;color:var(--navy)}
+.stat .lbl{font-size:.68rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.progress-section{padding:.5rem 1.5rem 1rem}
+.progress-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem}
+.progress-card{background:var(--white);border-radius:8px;border:1px solid var(--border);padding:.65rem .85rem}
+.progress-label{display:flex;justify-content:space-between;font-size:.75rem;font-weight:600;color:var(--text2);margin-bottom:.4rem}
+.progress-bar-bg{background:#F0F4FF;border-radius:4px;height:7px;overflow:hidden}
+.progress-bar{height:100%;border-radius:4px;transition:width .4s}
+.main{padding:0 1.5rem 2rem}
+.doc-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:var(--r);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid var(--border)}
+.doc-table th{background:#F8FAFC;text-align:left;padding:.55rem .85rem;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);border-bottom:1px solid var(--border)}
+.doc-table td{padding:.65rem .85rem;border-bottom:1px solid var(--border);vertical-align:middle;font-size:.85rem}
+.doc-table tr:last-child td{border-bottom:none}
+.doc-table tr:hover td{background:#FAFBFF}
+.cat-badge{display:inline-block;padding:.18rem .55rem;border-radius:4px;font-size:.7rem;font-weight:700}
+.c-pleadings{background:#EFF6FF;color:#1D4ED8}
+.c-discovery{background:#FFF7ED;color:#C2410C}
+.c-motions{background:#F0FDF4;color:#15803D}
+.c-correspondence{background:#FAF5FF;color:#7C3AED}
+.c-orders{background:#FEF9C3;color:#854D0E}
+.c-contracts{background:#ECFDF5;color:#065F46}
+.c-financial{background:#FEF2F2;color:#B91C1C}
+.c-other{background:#F3F4F6;color:#4B5563}
+.status-badge{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.68rem;font-weight:700}
+.s-complete{background:#ECFDF5;color:#065F46}
+.s-filed{background:#EFF6FF;color:#1D4ED8}
+.s-received{background:#F0FDF4;color:#15803D}
+.s-draft{background:#FFF7ED;color:#C2410C}
+.s-pending{background:#FFFBEB;color:#92400E}
+.s-missing{background:#FEF2F2;color:#B91C1C;border:1px dashed #FCA5A5}
+.s-notstarted{background:#F3F4F6;color:#6B7280}
+.action-cell{display:flex;gap:.35rem;align-items:center}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:.85rem;padding:.2rem;border-radius:4px;color:var(--text2);transition:all .2s}
+.icon-btn:hover{background:#F0F4FF;color:var(--navy)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--white);border-radius:12px;padding:1.5rem;width:min(480px,95vw);box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:.95rem;font-weight:700;margin-bottom:1rem;color:var(--navy)}
+.modal label{font-size:.78rem;font-weight:600;color:var(--text2);display:block;margin-bottom:.35rem}
+.modal input,.modal select,.modal textarea{width:100%;padding:.55rem .75rem;border:1px solid var(--border);border-radius:7px;font-size:.85rem;font-family:var(--font);margin-bottom:.65rem;color:var(--text)}
+.modal input:focus,.modal select:focus{outline:none;border-color:var(--navy)}
+.modal-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.25rem}
+.hint{font-size:.73rem;color:var(--text2);margin-bottom:.65rem;background:#F8FAFC;padding:.5rem .7rem;border-radius:6px;border:1px solid var(--border);line-height:1.4}
+.alert-bar{background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;padding:.6rem 1rem;font-size:.82rem;color:#B91C1C;margin:.5rem 1.5rem;display:none}
+.alert-bar.show{display:flex;align-items:center;gap:.5rem}
+.search-wrap{position:relative;flex:1;max-width:220px}
+.search-wrap input{padding:.4rem .75rem .4rem 1.8rem;width:100%}
+.search-icon{position:absolute;left:.55rem;top:50%;transform:translateY(-50%);font-size:.8rem;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="brand">Doc<span>Track</span> FL</a>
+</nav>
+
+<div class="page-header">
+  <h1>Doc<span>Track</span></h1>
+  <p>Matter document inventory — track every file by category and status, connect to Google Sheets, spot what's missing instantly.</p>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="openImport()">⬆ Import</button>
+  <button class="btn" onclick="openAdd()">+ Add Document</button>
+  <button class="btn" onclick="loadSample()">📋 Load Sample</button>
+  <div class="sep"></div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search documents..." oninput="renderTable()">
+  </div>
+  <select id="catFilter" onchange="renderTable()">
+    <option value="all">All Categories</option>
+  </select>
+  <select id="statusFilter" onchange="renderTable()">
+    <option value="all">All Statuses</option>
+    <option>Complete</option><option>Filed</option><option>Received</option>
+    <option>Draft</option><option>Pending</option><option>Missing</option><option>Not Started</option>
+  </select>
+  <div class="sep"></div>
+  <button class="btn" onclick="window.print()">🖨️ Print</button>
+</div>
+
+<div class="alert-bar" id="alertBar">⚠ <span id="alertMsg"></span></div>
+
+<div class="matter-label" id="matterLabel">
+  <span>Matter: <strong id="matterName">Sample Matter</strong></span>
+  <span id="matterMeta"></span>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+<div class="progress-section"><div class="progress-row" id="progressRow"></div></div>
+
+<div class="main">
+  <table class="doc-table" id="docTable">
+    <thead>
+      <tr>
+        <th>Document</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th>Assigned To</th>
+        <th>Notes</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="docBody"></tbody>
+  </table>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-bg" id="importModal">
+  <div class="modal">
+    <h3>Import Document List</h3>
+    <label>Matter / Client Name</label>
+    <input type="text" id="importMatterName" placeholder="e.g. Smith v. Jones — Case No. 2024-CA-001">
+    <label>Option A — Published Google Sheets CSV URL</label>
+    <div class="hint">File → Share → Publish to web → CSV → Copy link<br>Columns: document, category, status, date, assigned, notes</div>
+    <input type="url" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
+    <label>Option B — Upload CSV</label>
+    <input type="file" id="csvFile" accept=".csv">
+    <label>Option C — Paste CSV</label>
+    <textarea id="csvText" rows="4" style="margin-bottom:.65rem" placeholder="document,category,status,date,assigned,notes&#10;Complaint,Pleadings,Filed,2025-01-15,Maria Santos,Original + 2 copies filed"></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImport()">Cancel</button>
+      <button class="btn btn-primary" onclick="importData()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Document Modal -->
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h3>Add Document</h3>
+    <label>Document Name</label>
+    <input type="text" id="addName" placeholder="e.g. Motion for Summary Judgment">
+    <label>Category</label>
+    <select id="addCat">
+      <option>Pleadings</option><option>Discovery</option><option>Motions</option>
+      <option>Correspondence</option><option>Orders & Judgments</option>
+      <option>Contracts & Agreements</option><option>Financial</option><option>Other</option>
+    </select>
+    <label>Status</label>
+    <select id="addStatus">
+      <option>Not Started</option><option>Pending</option><option>Draft</option>
+      <option>Received</option><option>Filed</option><option>Complete</option><option>Missing</option>
+    </select>
+    <label>Date (received / filed / due)</label>
+    <input type="date" id="addDate">
+    <label>Assigned To</label>
+    <input type="text" id="addAssigned" placeholder="e.g. Maria Santos, Esq.">
+    <label>Notes</label>
+    <input type="text" id="addNotes" placeholder="Optional notes...">
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="addDoc()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATS = ['Pleadings','Discovery','Motions','Correspondence','Orders & Judgments','Contracts & Agreements','Financial','Other'];
+const CAT_CLS = {'Pleadings':'c-pleadings','Discovery':'c-discovery','Motions':'c-motions','Correspondence':'c-correspondence','Orders & Judgments':'c-orders','Contracts & Agreements':'c-contracts','Financial':'c-financial','Other':'c-other'};
+const STATUS_CLS = {'Complete':'s-complete','Filed':'s-filed','Received':'s-received','Draft':'s-draft','Pending':'s-pending','Missing':'s-missing','Not Started':'s-notstarted'};
+const CAT_COLORS = {'Pleadings':'#3B82F6','Discovery':'#F97316','Motions':'#22C55E','Correspondence':'#A855F7','Orders & Judgments':'#EAB308','Contracts & Agreements':'#10B981','Financial':'#EF4444','Other':'#6B7280'};
+
+const SAMPLE = [
+  {id:1,doc:'Complaint',cat:'Pleadings',status:'Filed',date:'2025-01-15',assigned:'Maria Santos, Esq.',notes:'Filed with Miami-Dade Circuit Court'},
+  {id:2,doc:'Summons',cat:'Pleadings',status:'Complete',date:'2025-01-15',assigned:'Maria Santos, Esq.',notes:'Served 1/20'},
+  {id:3,doc:"Defendant's Answer",cat:'Pleadings',status:'Received',date:'2025-02-04',assigned:'',notes:'Filed 20 days after service'},
+  {id:4,doc:'Interrogatories to Defendant',cat:'Discovery',status:'Filed',date:'2025-03-01',assigned:'James Lee, Esq.',notes:'Response due 3/31'},
+  {id:5,doc:'Response to Interrogatories',cat:'Discovery',status:'Pending',date:'2025-03-31',assigned:'James Lee, Esq.',notes:'Due from defendant'},
+  {id:6,doc:'Request for Production',cat:'Discovery',status:'Filed',date:'2025-03-01',assigned:'James Lee, Esq.',notes:''},
+  {id:7,doc:'Documents from Defendant',cat:'Discovery',status:'Missing',date:'',assigned:'James Lee, Esq.',notes:'Overdue — follow up required'},
+  {id:8,doc:'Motion to Compel Discovery',cat:'Motions',status:'Draft',date:'',assigned:'Maria Santos, Esq.',notes:'Draft pending partner review'},
+  {id:9,doc:'Engagement Letter',cat:'Contracts & Agreements',status:'Complete',date:'2025-01-10',assigned:'',notes:'Signed by client'},
+  {id:10,doc:'Retainer Agreement',cat:'Contracts & Agreements',status:'Complete',date:'2025-01-10',assigned:'',notes:'$5,000 retainer received'},
+  {id:11,doc:'Expert Witness Retention',cat:'Contracts & Agreements',status:'Pending',date:'',assigned:'Maria Santos, Esq.',notes:'Accident reconstruction expert'},
+  {id:12,doc:'Court Order — Case Management',cat:'Orders & Judgments',status:'Received',date:'2025-02-20',assigned:'',notes:'Discovery closes 8/1/2025'},
+  {id:13,doc:'Medical Records (Plaintiff)',cat:'Financial',status:'Received',date:'2025-02-15',assigned:'James Lee, Esq.',notes:'ER records + treating physician'},
+  {id:14,doc:'Demand Letter to Insurance',cat:'Correspondence',status:'Complete',date:'2025-01-25',assigned:'Maria Santos, Esq.',notes:'Policy limits demand $500K'},
+  {id:15,doc:'Insurance Response',cat:'Correspondence',status:'Missing',date:'',assigned:'',notes:'No response — 30+ days overdue'},
+];
+
+let docs = [];
+let nextId = 200;
+let matterTitle = 'Sample Matter';
+
+const $ = id => document.getElementById(id);
+
+function catBadge(c){ return `<span class="cat-badge ${CAT_CLS[c]||'c-other'}">${c}</span>`; }
+function statusBadge(s){ return `<span class="status-badge ${STATUS_CLS[s]||'s-notstarted'}">${s}</span>`; }
+function fmtDate(d){ return d ? new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'; }
+
+function renderTable(){
+  const search = $('searchInput').value.toLowerCase();
+  const cat = $('catFilter').value;
+  const status = $('statusFilter').value;
+  let filtered = docs.filter(d=>{
+    if(cat!=='all'&&d.cat!==cat) return false;
+    if(status!=='all'&&d.status!==status) return false;
+    if(search&&!d.doc.toLowerCase().includes(search)&&!d.notes.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  $('docBody').innerHTML = filtered.length===0
+    ? `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text2)">No documents match your filters.</td></tr>`
+    : filtered.map(d=>`
+      <tr>
+        <td><strong>${d.doc}</strong></td>
+        <td>${catBadge(d.cat)}</td>
+        <td>${statusBadge(d.status)}</td>
+        <td style="white-space:nowrap;font-size:.8rem">${fmtDate(d.date)}</td>
+        <td style="font-size:.8rem">${d.assigned||'—'}</td>
+        <td style="font-size:.78rem;color:var(--text2)">${d.notes||'—'}</td>
+        <td>
+          <div class="action-cell">
+            <select style="padding:.2rem .45rem;font-size:.72rem;border-radius:4px" onchange="updateStatus(${d.id},this.value)">
+              ${['Not Started','Pending','Draft','Received','Filed','Complete','Missing'].map(s=>`<option${d.status===s?' selected':''}>${s}</option>`).join('')}
+            </select>
+            <button class="icon-btn" onclick="removeDoc(${d.id})" title="Remove">✕</button>
+          </div>
+        </td>
+      </tr>`).join('');
+
+  updateStats();
+  updateCatFilter();
+  checkAlerts();
+}
+
+function updateStats(){
+  const total = docs.length;
+  const complete = docs.filter(d=>['Complete','Filed','Received'].includes(d.status)).length;
+  const missing = docs.filter(d=>d.status==='Missing').length;
+  const pending = docs.filter(d=>['Pending','Draft','Not Started'].includes(d.status)).length;
+  const pct = total ? Math.round(complete/total*100) : 0;
+  $('statsBar').innerHTML=`
+    <div class="stat"><div class="num">${total}</div><div class="lbl">Total Documents</div></div>
+    <div class="stat"><div class="num" style="color:#065F46">${complete}</div><div class="lbl">Complete / Filed</div></div>
+    <div class="stat"><div class="num" style="color:#EF4444">${missing}</div><div class="lbl">Missing</div></div>
+    <div class="stat"><div class="num" style="color:#D97706">${pending}</div><div class="lbl">Pending / Draft</div></div>
+    <div class="stat"><div class="num">${pct}%</div><div class="lbl">Overall Complete</div></div>
+  `;
+
+  const bycat = {};
+  CATS.forEach(c=>{bycat[c]={total:0,done:0}});
+  docs.forEach(d=>{
+    const c=d.cat||'Other';
+    if(!bycat[c]) bycat[c]={total:0,done:0};
+    bycat[c].total++;
+    if(['Complete','Filed','Received'].includes(d.status)) bycat[c].done++;
+  });
+  $('progressRow').innerHTML=CATS.filter(c=>bycat[c].total>0).map(c=>{
+    const pct=bycat[c].total?Math.round(bycat[c].done/bycat[c].total*100):0;
+    return `<div class="progress-card">
+      <div class="progress-label"><span>${c}</span><span>${bycat[c].done}/${bycat[c].total}</span></div>
+      <div class="progress-bar-bg"><div class="progress-bar" style="width:${pct}%;background:${CAT_COLORS[c]||'#6B7280'}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function updateCatFilter(){
+  const cur=$('catFilter').value;
+  const cats=[...new Set(docs.map(d=>d.cat))].sort();
+  $('catFilter').innerHTML='<option value="all">All Categories</option>'+cats.map(c=>`<option${cur===c?' selected':''}>${c}</option>`).join('');
+}
+
+function checkAlerts(){
+  const missing=docs.filter(d=>d.status==='Missing').length;
+  if(missing>0){
+    $('alertBar').classList.add('show');
+    $('alertMsg').textContent=`${missing} document${missing>1?'s are':' is'} marked as MISSING — review and follow up.`;
+  } else {
+    $('alertBar').classList.remove('show');
+  }
+}
+
+function updateStatus(id,status){
+  const d=docs.find(x=>x.id===id);
+  if(d){d.status=status;renderTable();}
+}
+
+function removeDoc(id){
+  docs=docs.filter(x=>x.id!==id);
+  renderTable();
+}
+
+function addDoc(){
+  const name=$('addName').value.trim();
+  if(!name){alert('Enter a document name.');return;}
+  docs.push({id:nextId++,doc:name,cat:$('addCat').value,status:$('addStatus').value,date:$('addDate').value,assigned:$('addAssigned').value.trim(),notes:$('addNotes').value.trim()});
+  $('addModal').classList.remove('open');
+  ['addName','addAssigned','addNotes'].forEach(id=>$(id).value='');
+  $('addDate').value='';
+  renderTable();
+}
+
+function parseCSV(text){
+  const lines=text.trim().split('\n').filter(Boolean);
+  const h=lines[0].split(',').map(x=>x.trim().toLowerCase().replace(/['"]/g,''));
+  return lines.slice(1).map((line,i)=>{
+    const vals=line.match(/(".*?"|[^,]+)/g)||line.split(',');
+    const obj={id:nextId++};
+    h.forEach((hh,j)=>{obj[hh]=(vals[j]||'').replace(/^"|"$/g,'').trim();});
+    return {
+      id:obj.id,
+      doc:obj.document||obj.doc||obj.name||obj['document name']||'Unknown',
+      cat:CATS.find(c=>c.toLowerCase()===(obj.category||obj.cat||'').toLowerCase())||'Other',
+      status:['Complete','Filed','Received','Draft','Pending','Missing','Not Started'].find(s=>s.toLowerCase()===(obj.status||'').toLowerCase())||'Not Started',
+      date:obj.date||obj['date received']||obj['date filed']||'',
+      assigned:obj.assigned||obj['assigned to']||obj.attorney||'',
+      notes:obj.notes||obj.note||''
+    };
+  });
+}
+
+function openImport(){$('importModal').classList.add('open');}
+function closeImport(){$('importModal').classList.remove('open');}
+
+async function importData(){
+  const url=$('sheetsUrl').value.trim();
+  const file=$('csvFile').files[0];
+  const text=$('csvText').value.trim();
+  const name=$('importMatterName').value.trim();
+  try{
+    let csv='';
+    if(url){const r=await fetch(url);if(!r.ok)throw new Error('Could not fetch URL.');csv=await r.text();}
+    else if(file){csv=await file.text();}
+    else if(text){csv=text;}
+    else{alert('Provide a URL, file, or CSV text.');return;}
+    docs=parseCSV(csv);
+    if(name){matterTitle=name;$('matterName').textContent=name;}
+    $('matterMeta').textContent=`${docs.length} documents imported`;
+    renderTable();
+    closeImport();
+  }catch(e){alert('Import failed: '+e.message);}
+}
+
+function loadSample(){
+  docs=[...SAMPLE.map(d=>({...d}))];
+  matterTitle='Rodriguez v. Martinez — Personal Injury';
+  $('matterName').textContent=matterTitle;
+  $('matterMeta').textContent='Miami-Dade County Circuit Court';
+  renderTable();
+}
+
+loadSample();
+</script>
+</body>
+</html>
