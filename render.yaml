@@ -1,4 +1,0 @@
-services:
-  - type: static_site
-    name: fl-doctrack
-    staticPublishPath: .
